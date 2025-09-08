@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./hotel-advisor
+      dockerfile: Dockerfile
+    environment:
+      - VITE_API_URL=https://votre-domaine.com/api
+    restart: unless-stopped
+    networks:
+      - booking-advisor
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - SCRAPER_PATH=/scraper
+    restart: unless-stopped
+    networks:
+      - booking-advisor
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      - scraper
+
+  scraper:
+    build:
+      context: ./booking-reviews-scraper
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - booking-advisor
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  booking-advisor:
+    driver: bridge
